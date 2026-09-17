@@ -1,0 +1,5 @@
+# ID;Nom;Spécialisation
+DOC1;Martin;Chirurgie
+DOC2;Dupont;Dermatologie
+DOC3;Lemoine;Vaccination
+DOC4;Bernard;Chirurgie

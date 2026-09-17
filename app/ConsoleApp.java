@@ -1,6 +1,9 @@
 package app;
 
 import exception.ShelterException;
+import java.io.File;
+import java.util.List;
+import java.util.Scanner;
 import model.Animal;
 import model.CareTask;
 import model.CareTaskStatus;
@@ -10,9 +13,7 @@ import repository.AnimalFileLoader;
 import repository.MedicalRecordFileLoader;
 import repository.Repository;
 import repository.VolunteerFileLoader;
-
-import java.util.List;
-import java.util.Scanner;
+import service.AssignmentService;
 
 public class ConsoleApp {
 
@@ -20,6 +21,7 @@ public class ConsoleApp {
     private final Repository<Doctor> doctorRepo = new Repository<>();
     private final Repository<CareTask> taskRepo = new Repository<>();
     private final Repository<Animal> animalRepo = new Repository<>();
+    private final AssignmentService assignmentService = new AssignmentService();
     private final Scanner scanner = new Scanner(System.in);
 
     public static void main(String[] args) {
@@ -27,31 +29,91 @@ public class ConsoleApp {
     }
 
     public void run() {
-        loadAllData(); // real Scanner-based file loading (Module 1)
+        loadAllData();
 
-        System.out.println("=== Animal Shelter Management System ===");
-        System.out.println("Se connecter en tant que :");
-        System.out.println("1. Volontaire");
-        System.out.println("2. Docteur");
-        System.out.println("3. Adopter un animal");
-        System.out.print("Choix : ");
+        while (true) {
+            System.out.println("\n=== Animal Shelter Management System ===");
+            System.out.println("1. Manager (Attribuer les tâches selon compétences)");
+            System.out.println("2. Volontaire (Consulter et valider mes tâches)");
+            System.out.println("3. Docteur (Mes interventions et actes médicaux)");
+            System.out.println("4. Adopter un animal");
+            System.out.println("5. Quitter");
+            System.out.print("Choix : ");
 
-        String choice = readLine();
+            String choice = readLine();
 
-        switch (choice) {
-            case "1" -> runVolunteerMenu();
-            case "2" -> runDoctorMenu();
-            case "3" -> runAdoptionMenu();
-            default -> System.out.println("Choix invalide.");
+            switch (choice) {
+                case "1" -> runManagerMenu();
+                case "2" -> runVolunteerMenu();
+                case "3" -> runDoctorMenu();
+                case "4" -> runAdoptionMenu();
+                case "5" -> {
+                    System.out.println("Fermeture de l'application.");
+                    return;
+                }
+                default -> System.out.println("Choix invalide. Veuillez réessayer.");
+            }
         }
     }
 
     // ---------------------------------------------------------------
-    // Volunteer flow
+    // 1. Manager Flow
+    // ---------------------------------------------------------------
+
+    private void runManagerMenu() {
+        System.out.println("\n--- Attribution des tâches par le Manager ---");
+        List<CareTask> unassigned = taskRepo.filter(t -> t.getStatus() == CareTaskStatus.UNASSIGNED);
+
+        if (unassigned.isEmpty()) {
+            System.out.println("Aucune tâche en attente d'assignation.");
+            return;
+        }
+
+        System.out.println("Tâches disponibles :");
+        for (CareTask t : unassigned) {
+            System.out.println("- [" + t.getIdTask() + "] " + t.getDescription()
+                    + " (Compétence/Spécialité requise : " + t.getRequiredSkill() + ")");
+        }
+
+        System.out.print("\nID de la tâche à assigner (ou laisser vide pour annuler) : ");
+        String taskId = readLine();
+        if (taskId.isBlank()) return;
+
+        try {
+            CareTask task = taskRepo.findById(taskId);
+
+            System.out.println("Type de collaborateur à assigner :");
+            System.out.println("1. Volontaire");
+            System.out.println("2. Docteur");
+            System.out.print("Choix : ");
+            String targetType = readLine();
+
+            if ("1".equals(targetType)) {
+                System.out.print("ID du volontaire : ");
+                String volId = readLine();
+                Volunteer v = volunteerRepo.findById(volId);
+                assignmentService.assignTaskToVolunteer(task, v);
+                System.out.println("Succès : Tâche [" + task.getIdTask() + "] assignée à " + v.getNameVolunteer() + ".");
+            } else if ("2".equals(targetType)) {
+                System.out.print("ID du docteur : ");
+                String docId = readLine();
+                Doctor d = doctorRepo.findById(docId);
+                assignmentService.assignTaskToDoctor(task, d);
+                System.out.println("Succès : Tâche [" + task.getIdTask() + "] assignée au Dr. " + d.getName() + ".");
+            } else {
+                System.out.println("Option non reconnue.");
+            }
+        } catch (ShelterException e) {
+            System.out.println("Erreur : " + e.getMessage());
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // 2. Volunteer Flow
     // ---------------------------------------------------------------
 
     private void runVolunteerMenu() {
-        System.out.print("Entrez votre id volontaire : ");
+        System.out.print("\nEntrez votre identifiant volontaire : ");
         String volunteerId = readLine();
 
         Volunteer volunteer;
@@ -64,125 +126,165 @@ public class ConsoleApp {
 
         System.out.println("Bonjour " + volunteer.getNameVolunteer() + " !");
 
-        List<CareTask> myTasks = taskRepo.filter(
-                task -> task.getStatus() == CareTaskStatus.UNASSIGNED
-                        && volunteer.getSkills().contains(task.getRequiredSkill())
+        List<CareTask> myTasks = taskRepo.filter(t ->
+                volunteer.getId().equals(t.getAssignedWorkerId()) && t.getStatus() == CareTaskStatus.ASSIGNED
         );
 
         if (myTasks.isEmpty()) {
-            System.out.println("Aucune tâche disponible correspondant à vos compétences pour le moment.");
+            System.out.println("Vous n'avez actuellement aucune tâche assignée en attente.");
             return;
         }
 
-        System.out.println("Tâches disponibles pour vous :");
-        for (CareTask task : myTasks) {
-            System.out.println("- [" + task.getIdTask() + "] " + task.getDescription()
-                    + " (compétence requise : " + task.getRequiredSkill() + ")");
+        System.out.println("Vos tâches obligatoires assignées par le manager :");
+        for (CareTask t : myTasks) {
+            System.out.println("- [" + t.getIdTask() + "] " + t.getDescription());
         }
 
-        System.out.print("Entrez l'id de la tâche à compléter (ou vide pour quitter) : ");
+        System.out.print("\nEntrez l'ID de la tâche terminée pour la clôturer (ou vide) : ");
         String taskId = readLine();
-        if (taskId.isBlank()) {
-            return;
-        }
+        if (taskId.isBlank()) return;
 
         try {
             CareTask task = taskRepo.findById(taskId);
+            if (!volunteer.getId().equals(task.getAssignedWorkerId())) {
+                System.out.println("Erreur : Cette tâche ne vous a pas été attribuée.");
+                return;
+            }
             task.markCompleted();
-            System.out.println("Tâche " + taskId + " marquée comme terminée. Merci !");
+            System.out.println("Tâche " + taskId + " complétée avec succès. Merci !");
         } catch (ShelterException e) {
             System.out.println("Erreur : " + e.getMessage());
         }
     }
 
     // ---------------------------------------------------------------
-    // Doctor flow
+    // 3. Doctor Flow
     // ---------------------------------------------------------------
 
     private void runDoctorMenu() {
-        System.out.print("Entrez votre id docteur : ");
-        String doctorId = readLine();
+        System.out.print("\nEntrez votre identifiant docteur : ");
+        String docId = readLine();
 
         Doctor doctor;
         try {
-            doctor = doctorRepo.findById(doctorId);
+            doctor = doctorRepo.findById(docId);
         } catch (ShelterException e) {
             System.out.println("Erreur : " + e.getMessage());
             return;
         }
 
         System.out.println("Bonjour Dr. " + doctor.getName() + " (" + doctor.getSpecialization() + ")");
-        System.out.print("Id de l'animal traité : ");
-        String animalId = readLine();
-        System.out.print("Description du traitement : ");
-        String description = readLine();
 
-        try {
-            doctor.performTreatment(animalId, description);
-            System.out.println("Traitement enregistré pour l'animal " + animalId + ".");
-        } catch (ShelterException e) {
-            System.out.println("Erreur : " + e.getMessage());
+        List<CareTask> assignedTasks = taskRepo.filter(t ->
+                doctor.getId().equals(t.getAssignedWorkerId()) && t.getStatus() == CareTaskStatus.ASSIGNED
+        );
+
+        if (!assignedTasks.isEmpty()) {
+            System.out.println("\nInterventions chirurgicales / soins assignés :");
+            for (CareTask t : assignedTasks) {
+                System.out.println("- [" + t.getIdTask() + "] " + t.getDescription());
+            }
+        }
+
+        System.out.println("\nActions disponibles :");
+        System.out.println("1. Enregistrer un traitement libre sur un animal");
+        System.out.println("2. Valider une tâche assignée comme terminée");
+        System.out.print("Choix : ");
+        String choice = readLine();
+
+        if ("1".equals(choice)) {
+            System.out.print("ID de l'animal soigné : ");
+            String aId = readLine();
+            System.out.print("Description de l'acte / traitement : ");
+            String desc = readLine();
+
+            try {
+                doctor.performTreatment(aId, desc);
+                System.out.println("Traitement enregistré avec succès pour l'animal " + aId + ".");
+            } catch (ShelterException e) {
+                System.out.println("Erreur : " + e.getMessage());
+            }
+        } else if ("2".equals(choice)) {
+            System.out.print("ID de la tâche terminée : ");
+            String tId = readLine();
+            try {
+                CareTask t = taskRepo.findById(tId);
+                if (!doctor.getId().equals(t.getAssignedWorkerId())) {
+                    System.out.println("Erreur : Cette tâche n'a pas été assignée à votre compte.");
+                    return;
+                }
+                t.markCompleted();
+                System.out.println("Intervention " + tId + " validée comme terminée.");
+            } catch (ShelterException e) {
+                System.out.println("Erreur : " + e.getMessage());
+            }
         }
     }
 
     // ---------------------------------------------------------------
-    // Adoption flow
+    // 4. Adoption Flow
     // ---------------------------------------------------------------
 
     private void runAdoptionMenu() {
-        List<Animal> eligibleAnimals = animalRepo.filter(Animal::isAdoptionEligible);
+        List<Animal> eligible = animalRepo.filter(Animal::isAdoptionEligible);
 
-        if (eligibleAnimals.isEmpty()) {
-            System.out.println("Aucun animal n'est éligible à l'adoption pour le moment.");
+        if (eligible.isEmpty()) {
+            System.out.println("\nAucun animal n'est éligible à l'adoption pour le moment.");
             return;
         }
 
-        System.out.println("Animaux disponibles à l'adoption :");
-        for (Animal animal : eligibleAnimals) {
-            System.out.println("- [" + animal.getId() + "] " + animal.getName()
-                    + " (" + animal.getClass().getSimpleName() + ", " + animal.getAge() + " semaines)");
+        System.out.println("\nAnimaux prêts à être adoptés :");
+        for (Animal a : eligible) {
+            System.out.println("- [" + a.getId() + "] " + a.getName()
+                    + " (" + a.getClass().getSimpleName() + ", " + a.getAge() + " semaines)");
         }
 
-        System.out.print("Id de l'animal que vous voulez adopter (ou vide pour quitter) : ");
-        String animalId = readLine();
-        if (animalId.isBlank()) {
-            return;
-        }
+        System.out.print("\nEntrez l'ID de l'animal à adopter (ou vide pour quitter) : ");
+        String id = readLine();
+        if (id.isBlank()) return;
 
         try {
-            Animal animal = animalRepo.findById(animalId);
-            animal.completeAdoption();
-            System.out.println("Félicitations, l'adoption de " + animal.getName() + " est confirmée !");
+            Animal a = animalRepo.findById(id);
+            a.completeAdoption();
+            System.out.println("Félicitations ! L'adoption de " + a.getName() + " est enregistrée.");
         } catch (ShelterException e) {
             System.out.println("Adoption refusée : " + e.getMessage());
         }
     }
 
     // ---------------------------------------------------------------
-    // Helpers
+    // Helpers & Data Initialization
     // ---------------------------------------------------------------
 
     private String readLine() {
         return scanner.nextLine().trim();
     }
 
-    /**
-     * Real Module 1 loading: animals.txt and volunteers.txt via Scanner,
-     * then medical_records.txt is applied on top of the already-loaded
-     * animals. Doctors and CareTasks stay hardcoded for now — the project
-     * only requires file loading for animals, volunteers, and medical
-     * records.
-     */
     private void loadAllData() {
-        new AnimalFileLoader().loadFromFile("data/animals.txt", animalRepo);
-        new VolunteerFileLoader().loadFromFile("data/volunteers.txt", volunteerRepo);
-        new MedicalRecordFileLoader().loadFromFile("data/medical_records.txt", animalRepo);
+        // Résolution robuste des fichiers de données (prend en compte majuscules et minuscules)
+        String animalFile = resolvePath("data/Animals.txt");
+        String volunteerFile = resolvePath("data/Volunteers.txt");
+        String medicalFile = resolvePath("data/MedicalRecords.txt");
+        String doctorFile = resolvePath("data/Doctors.txt");
+
+        new AnimalFileLoader().loadFromFile(animalFile, animalRepo);
+        new VolunteerFileLoader().loadFromFile(volunteerFile, volunteerRepo);
+        new MedicalRecordFileLoader().loadFromFile(medicalFile, animalRepo);
 
         Doctor martin = new Doctor("DOC1", "Martin", "Chirurgie");
         doctorRepo.add(martin);
 
         taskRepo.add(new CareTask("T1", "Feed the dogs", "feeding"));
         taskRepo.add(new CareTask("T2", "Walk the cats", "walking"));
-        taskRepo.add(new CareTask("T3", "Medical check", "medical"));
+        taskRepo.add(new CareTask("T3", "Chirurgie patte cassée", "Chirurgie"));
+    }
+
+    private String resolvePath(String... candidates) {
+        for (String candidate : candidates) {
+            if (new File(candidate).exists()) {
+                return candidate;
+            }
+        }
+        return candidates[0];
     }
 }
