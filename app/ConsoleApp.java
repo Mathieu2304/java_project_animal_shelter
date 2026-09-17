@@ -1,6 +1,7 @@
 package app;
 
 import exception.ShelterException;
+import java.io.File;
 import java.util.List;
 import java.util.Scanner;
 import model.Animal;
@@ -14,13 +15,6 @@ import repository.Repository;
 import repository.VolunteerFileLoader;
 import service.AssignmentService;
 
-<<<<<<< HEAD
-=======
-import java.io.File;
-import java.util.List;
-import java.util.Scanner;
-
->>>>>>> bf6923aacee9ccdb0a16571a25d1560a22d8beb8
 public class ConsoleApp {
 
     private final Repository<Volunteer> volunteerRepo = new Repository<>();
@@ -267,11 +261,6 @@ public class ConsoleApp {
     }
 
     private void loadAllData() {
-<<<<<<< HEAD
-        new AnimalFileLoader().loadFromFile("data/Animals.txt", animalRepo);
-        new VolunteerFileLoader().loadFromFile("data/Volunteers.txt", volunteerRepo);
-        new MedicalRecordFileLoader().loadFromFile("data/MedicalRecords.txt", animalRepo);
-=======
         // Résolution robuste des fichiers de données (prend en compte majuscules et minuscules)
         String animalFile = resolvePath("data/Animals.txt");
         String volunteerFile = resolvePath("data/Volunteers.txt");
@@ -281,7 +270,6 @@ public class ConsoleApp {
         new AnimalFileLoader().loadFromFile(animalFile, animalRepo);
         new VolunteerFileLoader().loadFromFile(volunteerFile, volunteerRepo);
         new MedicalRecordFileLoader().loadFromFile(medicalFile, animalRepo);
->>>>>>> bf6923aacee9ccdb0a16571a25d1560a22d8beb8
 
         Doctor martin = new Doctor("DOC1", "Martin", "Chirurgie");
         doctorRepo.add(martin);
