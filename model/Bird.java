@@ -1,8 +1,11 @@
 package model;
 
+import java.util.Set;
+
 public class Bird extends Animal {
 
     private static final int MIN_ADOPTION_AGE_WEEKS = 6;
+    private static final Set<String> REQUIRED_VACCINATIONS = Set.of("FVRCP", "Rabies");
 
     private boolean canFly;
 
@@ -17,6 +20,8 @@ public class Bird extends Animal {
 
     @Override
     public boolean isAdoptionEligible() {
-        return getStatus() == AnimalStatus.AVAILABLE && getAge() >= MIN_ADOPTION_AGE_WEEKS;
+
+        return getStatus() == AnimalStatus.AVAILABLE && getAge() >= MIN_ADOPTION_AGE_WEEKS
+                && getMedicalRecord().hasAllRequiredVaccinations(REQUIRED_VACCINATIONS);
     }
 }
