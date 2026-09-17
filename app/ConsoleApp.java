@@ -1,6 +1,8 @@
 package app;
 
 import exception.ShelterException;
+import java.util.List;
+import java.util.Scanner;
 import model.Animal;
 import model.CareTask;
 import model.CareTaskStatus;
@@ -10,9 +12,6 @@ import repository.AnimalFileLoader;
 import repository.MedicalRecordFileLoader;
 import repository.Repository;
 import repository.VolunteerFileLoader;
-
-import java.util.List;
-import java.util.Scanner;
 
 public class ConsoleApp {
 
@@ -174,9 +173,9 @@ public class ConsoleApp {
      * records.
      */
     private void loadAllData() {
-        new AnimalFileLoader().loadFromFile("data/animals.txt", animalRepo);
-        new VolunteerFileLoader().loadFromFile("data/volunteers.txt", volunteerRepo);
-        new MedicalRecordFileLoader().loadFromFile("data/medical_records.txt", animalRepo);
+        new AnimalFileLoader().loadFromFile("data/Animals.txt", animalRepo);
+        new VolunteerFileLoader().loadFromFile("data/Volunteers.txt", volunteerRepo);
+        new MedicalRecordFileLoader().loadFromFile("data/MedicalRecords.txt", animalRepo);
 
         Doctor martin = new Doctor("DOC1", "Martin", "Chirurgie");
         doctorRepo.add(martin);
