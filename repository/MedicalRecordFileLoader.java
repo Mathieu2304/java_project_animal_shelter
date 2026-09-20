@@ -31,21 +31,46 @@ public class MedicalRecordFileLoader {
     }
 
     private void applyLine(String line, Repository<Animal> animalRepo) {
-        String[] fields = line.split(";");
-        if (fields.length < 4) {
+        String[] fields = line.split(";", -1);
+        if (fields.length != 4) {
             throw new ShelterException("Malformed medical record (expected 4 fields): " + line);
         }
 
         String animalId = fields[0].trim();
-        boolean vaccinationUpToDate = Boolean.parseBoolean(fields[1].trim());
-        boolean underTreatment = Boolean.parseBoolean(fields[2].trim());
-        String notes = fields[3].trim();
+        String vaccinationsField = fields[1].trim();
+        String treatmentsField = fields[2].trim();
+        String notesField = fields[3].trim();
 
-        Animal animal = animalRepo.findById(animalId); // throws ShelterException if unknown
+        if (animalId.isBlank()) {
+            throw new ShelterException("Animal id cannot be blank.");
+        }
+        Animal animal = animalRepo.findById(animalId);
 
         MedicalRecord record = animal.getMedicalRecord();
-        record.setVaccinationUpToDate(vaccinationUpToDate);
-        record.setUnderTreatment(underTreatment);
-        record.setNotes(notes);
+        if (!vaccinationsField.isBlank()) {
+            String[] vaccinations = vaccinationsField.split(",");
+
+            for (String vaccination : vaccinations) {
+                String value = vaccination.trim();
+
+                if (!value.isBlank()) {
+                    record.addVaccination(value);
+                }
+            }
+        }
+        if (!treatmentsField.isBlank()) {
+            String[] treatments = treatmentsField.split(",");
+
+            for (String treatment : treatments) {
+                String value = treatment.trim();
+
+                if (!value.isBlank()) {
+                    record.addTreatment(value);
+                }
+            }
+        }
+        if (!notesField.isBlank()) {
+            record.addNote(notesField);
+        }
     }
 }

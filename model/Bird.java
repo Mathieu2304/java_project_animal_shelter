@@ -5,7 +5,7 @@ import java.util.Set;
 public class Bird extends Animal {
 
     private static final int MIN_ADOPTION_AGE_WEEKS = 6;
-    private static final Set<String> REQUIRED_VACCINATIONS = Set.of("FVRCP", "Rabies");
+    private static final Set<String> REQUIRED_VACCINATIONS = Set.of("FVRCP", "RABIES");
 
     private boolean canFly;
 

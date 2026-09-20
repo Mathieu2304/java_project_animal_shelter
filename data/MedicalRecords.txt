@@ -1,2 +1,4 @@
-A1;true;false;Healthy Labrador, all vaccines up to date
-A3;false;true;Currently under antibiotic treatment
+A1;RAGE,DHPP;;Healthy Labrador, all vaccines up to date
+A2;RAGE,DHPP;;Healthy Beagle
+A3;FVRCP;Antibiotics;Currently under antibiotic treatment
+A4;FVRCP,Rabies;;Healthy bird
